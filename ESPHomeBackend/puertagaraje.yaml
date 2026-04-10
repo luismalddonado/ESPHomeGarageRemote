@@ -5,9 +5,7 @@ esphome:
 esp32:
   board: esp32dev
   framework:
-    type: arduino
-    advanced:
-      minimum_chip_revision: "3.0"    
+    type: esp-idf 
   
 #wifi: 
 #  ssid:  DOMOTICACASA
@@ -17,16 +15,16 @@ esp32:
 logger:
   level: INFO
 
-# Enable Home Assistant API
+#Enable Home Assistant API
 #api:
 #  reboot_timeout: 0s
 #  encryption:
 #    key: "Jokv+sef/jexoCyDaNj/b4RDGbAIysZv/o4IboDkzi4="
-    
+#    
 #ota:
 #  - platform: esphome
 #    password: "5523434a"
-    
+#    
 #web_server:
 #  port: 80
 
@@ -68,32 +66,19 @@ interval:
             - remote_transmitter.transmit_raw:
                 carrier_frequency: 0Hz
                 code: !lambda 'return id(learned_code);'
-#            - lambda: |-
-#                id(learn_status).publish_state("Signal transmitted!");
-#                ESP_LOGI("replay", "Send complete");
-#            - lambda: |-
-#                std::string preview = "";
-#                int count = 0;
-#                for (int32_t val : id(learned_code)) {
-#                    if (count > 0) preview += ", ";
-#                    preview += std::to_string(val);
-#                    count++;
-#                    if (count >= 10) {
-#                      preview += "... (" + std::to_string(id(learned_code).size()) + " total)";
-#                      break;
-#                    }
-#                } 
-#                id(last_signal).publish_state(preview.c_str());      
 
-  
+    
+
 esp32_ble:
-  io_capability: none 
-  disable_bt_logs: true  # Default, saves flash
+  io_capability: none
+  enable_on_boot: true
   
 esp32_ble_server:
+  id: puertagaraje
   manufacturer: "ESP32"
   model: "ESP32"
-  manufacturer_data: [0x4C, 0, 0x23, 77, 0xF0 ]
+  firmware_version: "1.0.0"
+  max_clients: 3  
   on_connect:
     - lambda: |-
         ESP_LOGI("BLE", "Connection started!");
@@ -101,13 +86,14 @@ esp32_ble_server:
     - lambda: |-
         ESP_LOGI("BLE", "Connection finished!");
   services:
-    - uuid: 2a24b789-7aab-4535-af3e-ee76a35cc42d
+    - uuid: "2a24b789-7aab-4535-af3e-ee76a35cc42d"
       advertise: true
       characteristics:
-        - id: button_pressed
-          uuid: cad48e28-7fbe-41cf-bae9-d77a6c233423
+        - uuid: "cad48e28-7fbe-41cf-bae9-d77a6c233423"
+          id: open_the_door
           description: "Button pressed"
           write: true
+          notify: true
           on_write:
             then:
                 - lambda: |-
@@ -156,19 +142,12 @@ button:
           id(repeat_counter)=100;
           ESP_LOGI("BLE", "repeat_counter reset to %d", id(repeat_counter));
 
-
 text_sensor:
-#  - platform: template
-#    name: "Signal"
-#    id: last_signal
-#    icon: "mdi:signal"
-
   - platform: template
     name: "Status"
     id: learn_status
     icon: "mdi:information"
-
-    
+ 
 sensor:
   - platform: template
     name: "Signal length"
