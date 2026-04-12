@@ -66,7 +66,17 @@ interval:
             - remote_transmitter.transmit_raw:
                 carrier_frequency: 0Hz
                 code: !lambda 'return id(learned_code);'
+  - interval: 15s
+    then:
+      - lambda: |-
+          id(repeat_counter_read)->set_value({
+            (uint8_t)(id(repeat_counter)),
+            (uint8_t)(id(repeat_counter) >> 8),
+            (uint8_t)(id(repeat_counter) >> 16),
+            (uint8_t)(id(repeat_counter) >> 24)
+          });
 
+          id(repeat_counter_read)->notify();
     
 
 esp32_ble:
@@ -78,7 +88,7 @@ esp32_ble_server:
   manufacturer: "ESP32"
   model: "ESP32"
   firmware_version: "1.0.0"
-  max_clients: 3  
+  max_clients: 1  
   on_connect:
     - lambda: |-
         ESP_LOGI("BLE", "Connection started!");
@@ -99,7 +109,14 @@ esp32_ble_server:
                 - lambda: |-
                     id(repeat_counter) = 100;
                     ESP_LOGI("BLE", "repeat_counter set to %d", id(repeat_counter));
-
+        - uuid: "cad48e28-7fbe-41cf-bae9-d77a6c233429"
+          id: repeat_counter_read
+          description: "Seconds since last PING"
+          read: true
+          notify: true
+          value: !lambda |-
+                    uint32_t val = id(repeat_counter);
+                    return {(uint8_t)(val), (uint8_t)(val >> 8), (uint8_t)(val >> 16), (uint8_t)(val >> 24)};
 # SPI Bus
 spi:
   clk_pin: GPIO18
