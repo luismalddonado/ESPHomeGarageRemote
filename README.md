@@ -36,6 +36,8 @@ sequenceDiagram
 
 ## 🚪 puertagaraje Features
 
+### Prerequisites: CC1101 module wired to ESP32
+
 - Acts as a **Bluetooth server**
 - Listens for BLE commands from the **loracoche** module:
   - `open_the_door`
