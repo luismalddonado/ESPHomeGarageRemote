@@ -1,5 +1,7 @@
 # ESPHome Garage Remote Backend
 
+This system allows you to open you Garage door based on the reception of LORA commands.
+
 This ESPHome backend has two different modules:
 
 - puertagaraje
@@ -27,7 +29,9 @@ sequenceDiagram
   - `pingcasa`
   - `cmdopen`
 - Upon receiving valid commands, it sends a BLE command (`open_the_door`) to the **puertagaraje** module
- 
+- The module acts as a gateway between your Home assistant and **puertagaraje** module. 
+	-- While previous **LoRa commands** are available in the air, it ensures **puertagaraje** is sending the **433 MHz RF signal**
+	-- An OLED displays the current status of the system
 ---
 
 ## 🚪 puertagaraje Features
