@@ -1,11 +1,10 @@
-#ESPHome Garage Remote backend
+# ESPHome Garage Remote Backend
 
-This ESPHome backend has two different modules
+This ESPHome backend has two different modules:
 
-- puertagarage
+- puertagaraje
 - loracoche
 
-```md
 ## Architecture Diagram
 
 ```mermaid
