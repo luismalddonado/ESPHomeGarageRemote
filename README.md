@@ -27,7 +27,7 @@ sequenceDiagram
   - `pingcasa`
   - `cmdopen`
 - Upon receiving valid commands, it sends a BLE command (`open_the_door`) to the **puertagaraje** module
-
+ 
 ---
 
 ## 🚪 puertagaraje Features
