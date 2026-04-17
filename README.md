@@ -18,7 +18,7 @@ sequenceDiagram
     LC->>PG: BLE command (open_the_door)
     PG->>D: Send 433 MHz RF signal
     PG-->>LC: repeat_counter_read (remaining time)
-	
+```	
 
 ## 🚗 loracoche Features
 
