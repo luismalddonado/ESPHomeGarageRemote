@@ -5,9 +5,9 @@ This ESPHome backend has two different modules
 - puertagarage
 - loracoche
 
-
-
 ```md
+## Architecture Diagram
+
 ```mermaid
 sequenceDiagram
     participant HA as Home Assistant
