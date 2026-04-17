@@ -55,6 +55,22 @@ This project is based on the
 - Communication flow:
   - Home Assistant → LoRa → loracoche → BLE → puertagaraje → RF → Garage Door
 - Designed for modularity and remote operation
+- This would be an example code to send LORA commands to  **loracoche** 
+
+```yaml
+button:
+  - platform: template
+    id: open_door
+    name: "Open garage door"
+    on_press:
+      then:
+        - sx127x.send_packet:
+            data: !lambda |-
+              ESP_LOGI("LoRa", "CMDOPEN packege sent");
+              std::string msg = "cmdopen";
+              return std::vector<uint8_t>(msg.begin(), msg.end());
+```
+			  
 
 
 
