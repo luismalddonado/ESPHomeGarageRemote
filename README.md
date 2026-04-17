@@ -7,13 +7,12 @@ This ESPHome backend has two different modules
 
 
 
-Home Assistant  loracoche      puertagarage    Door to open
-┌─────┐			┌───────┐ 		┌───────┐ 		┌─────┐
-│ 	  │ 		│ 		│ ─────>│ 		│ 		│     │
-│ 	  │ ──────> │ 		│ 		│ 		│ ─────>│     │
-│ 	  │ 		│ 		│ <─────│ 		│ 		│ 	  │
-└─────┘ 		└───────┘ 		└───────┘ 		└─────┘
-
+```mermaid
+graph LR
+    HA[Home Assistant] --> Lora[loracoche]
+    Lora --> Puerta[puertagaraje]
+    Puerta --> Door[Garage Door]
+    Puerta --> Lora
 
 ## 🚗 loracoche Features
 
