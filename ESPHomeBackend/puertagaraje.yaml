@@ -88,7 +88,7 @@ esp32_ble_server:
   manufacturer: "ESP32"
   model: "ESP32"
   firmware_version: "1.0.0"
-  max_clients: 1  
+  max_clients: 3 
   on_connect:
     - lambda: |-
         ESP_LOGI("BLE", "Connection started!");
