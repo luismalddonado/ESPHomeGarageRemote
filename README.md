@@ -7,12 +7,19 @@ This ESPHome backend has two different modules
 
 
 
-Home Assistant   loracoche      puertagaraje    Door to open
-┌─────┐          ┌─────────┐    ┌─────────┐      ┌─────┐
-│     │          │         │ ─▶ │         │      │     │
-│     │ ───────▶ │         │    │         │ ───▶ │     │
-│     │          │         │ ◀─ │         │      │     │
-└─────┘          └─────────┘    └─────────┘      └─────┘
+```md
+```mermaid
+sequenceDiagram
+    participant HA as Home Assistant
+    participant LC as loracoche
+    participant PG as puertagaraje
+    participant D as Garage Door
+
+    HA->>LC: LoRa command (cmdopen / pingcasa)
+    LC->>PG: BLE command (open_the_door)
+    PG->>D: Send 433 MHz RF signal
+    PG-->>LC: repeat_counter_read (remaining time)
+	
 
 ## 🚗 loracoche Features
 
