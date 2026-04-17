@@ -55,7 +55,7 @@ This project is based on the
 - Communication flow:
   - Home Assistant → LoRa → loracoche → BLE → puertagaraje → RF → Garage Door
 - Designed for modularity and remote operation
-- This would be an example code to send LORA commands to  **loracoche** 
+- This would be an example code to send LORA commands to  **loracoche** from a third ESP Home device connected to your Home Assistant
 
 ```yaml
 button:
@@ -69,6 +69,20 @@ button:
               ESP_LOGI("LoRa", "CMDOPEN packege sent");
               std::string msg = "cmdopen";
               return std::vector<uint8_t>(msg.begin(), msg.end());
+			  
+packet_transport:
+  platform: sx127x
+  update_interval: 60s
+  sensors:
+    - pingcasa
+  providers:
+    - name: lorasender1
+	
+sensor:
+  - platform: template
+    name: "PING casa"
+    id: pingcasa
+    update_interval: 60s    	
 ```
 			  
 
