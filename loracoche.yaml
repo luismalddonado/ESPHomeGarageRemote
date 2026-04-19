@@ -96,8 +96,8 @@ ble_client:
               - logger.log: "Sending pending BLE command"
               - ble_client.ble_write:
                   id: puertagaraje
-                  service_uuid: 2a24b789-7aab-4535-af3e-ee76a35cc42d
-                  characteristic_uuid: cad48e28-7fbe-41cf-bae9-d77a6c233423
+                  service_uuid: "180F"
+                  characteristic_uuid: "1801"
                   value: 1
               - lambda: |-
                   id(ble_command_pending) = false;            
@@ -152,11 +152,11 @@ interval:
                     - logger.log: "BLE just connected. Sending command."
                     - ble_client.ble_write:
                         id: puertagaraje
-                        service_uuid: 2a24b789-7aab-4535-af3e-ee76a35cc42d
-                        characteristic_uuid: cad48e28-7fbe-41cf-bae9-d77a6c233423
+                        service_uuid: "180F"
+                        characteristic_uuid: "1801"
                         value: 1
                     - lambda: |-
-                        id(open_door_command_duration)=300;
+                        id(open_door_command_duration)=180;
                         id(abrir_puerta)=0;
                   else:
                     - logger.log: "BLE NOT connected. Queuing command."
@@ -227,8 +227,8 @@ sensor:
     type: characteristic
     ble_client_id: puertagaraje
     name: "Pending executions on the server"
-    service_uuid: 2a24b789-7aab-4535-af3e-ee76a35cc42d
-    characteristic_uuid: cad48e28-7fbe-41cf-bae9-d77a6c233429
+    service_uuid: "180F"
+    characteristic_uuid: "1802"
     notify: true
     lambda: |-
       if (x.size() == 4) {
@@ -263,7 +263,7 @@ display:
           } 
           else if (id(page) == 1) 
           {
-             if (id(last_home_event_time)<15)
+             if (id(last_home_event_time)<30)
              {
                 it.printf(center_x, center_y / 2, id(display_font2), TextAlign::CENTER,"STARTED");
              }

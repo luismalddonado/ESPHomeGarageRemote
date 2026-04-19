@@ -43,7 +43,7 @@ globals:
   - id: repeat_counter
     type: int
     restore_value: no
-    initial_value: '100'
+    initial_value: '60'
 
 interval:
   - interval: 3s
@@ -96,10 +96,10 @@ esp32_ble_server:
     - lambda: |-
         ESP_LOGI("BLE", "Connection finished!");
   services:
-    - uuid: "2a24b789-7aab-4535-af3e-ee76a35cc42d"
+    - uuid: "180F"
       advertise: true
       characteristics:
-        - uuid: "cad48e28-7fbe-41cf-bae9-d77a6c233423"
+        - uuid: "1801"
           id: open_the_door
           description: "Button pressed"
           write: true
@@ -107,9 +107,9 @@ esp32_ble_server:
           on_write:
             then:
                 - lambda: |-
-                    id(repeat_counter) = 100;
+                    id(repeat_counter) = 60;
                     ESP_LOGI("BLE", "repeat_counter set to %d", id(repeat_counter));
-        - uuid: "cad48e28-7fbe-41cf-bae9-d77a6c233429"
+        - uuid: "1802"
           id: repeat_counter_read
           description: "Seconds since last PING"
           read: true
@@ -156,7 +156,7 @@ button:
     icon: "mdi:replay"
     on_press:
       - lambda: |-
-          id(repeat_counter)=100;
+          id(repeat_counter)=60;
           ESP_LOGI("BLE", "repeat_counter reset to %d", id(repeat_counter));
 
 text_sensor:
