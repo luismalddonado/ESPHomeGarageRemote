@@ -1,5 +1,5 @@
 esphome:
-  name: loracoche
+  name: loracochelilygo
 
 esp32:
   board: esp32dev
@@ -73,6 +73,11 @@ globals:
     restore_value: no
     initial_value: '0'
 
+  - id: time_since_start
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+    
   - id: max_wait_time_home_event
     type: int
     restore_value: no
@@ -114,6 +119,7 @@ interval:
   - interval: 1s
     then:
       - lambda: |-
+          id(time_since_start)++;
           // 30 segs margin to open the door again
           if (id(open_door_command_duration) > 30) 
           {
@@ -263,7 +269,7 @@ display:
           } 
           else if (id(page) == 1) 
           {
-             if (id(last_home_event_time)<30)
+             if (id(time_since_start)<100)
              {
                 it.printf(center_x, center_y / 2, id(display_font2), TextAlign::CENTER,"STARTED");
              }
@@ -288,16 +294,23 @@ display:
              }
              else
              {
-                if (id(abrir_puerta)) 
-                {
-                 it.printf(center_x, center_y / 2, id(display_font2), TextAlign::CENTER,"CLOSE");
-                }
-                else
-                {
-                    it.printf(center_x, center_y / 2, id(display_font2), TextAlign::CENTER,"FAR");
-                }
+                 if (id(time_since_start)<100)
+                 {
+                    it.printf(center_x, center_y / 2, id(display_font2), TextAlign::CENTER,"STARTED");
+                 }
+                 else
+                 {
+                
+                    if (id(abrir_puerta)) 
+                    {
+                     it.printf(center_x, center_y / 2, id(display_font2), TextAlign::CENTER,"CLOSE");
+                    }
+                    else
+                    {
+                        it.printf(center_x, center_y / 2, id(display_font2), TextAlign::CENTER,"FAR");
+                    }
+                 }
              }
-          
           }
 font:
   - file: "gfonts://Roboto"
