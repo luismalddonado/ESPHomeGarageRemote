@@ -138,7 +138,7 @@ esp32_ble_server:
           on_write:
             then:
                 - lambda: |-
-                    id(learning_mode) = true;
+                    id(learning_mode) = false;
                     id(learn_status).publish_state("End waiting for signal!");
                     ESP_LOGI("BLE", "Learning mode OFF");
         - uuid: "1805"
