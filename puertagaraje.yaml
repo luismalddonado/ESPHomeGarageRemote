@@ -7,26 +7,26 @@ esp32:
   framework:
     type: esp-idf 
   
-#wifi: 
-#  ssid:  DOMOTICACASA
-#  password: "33333333"
-#  reboot_timeout: 0s
+wifi: 
+  ssid:  DOMOTICACASA
+  password: "33333333"
+  reboot_timeout: 0s
 
 logger:
   level: INFO
 
 #Enable Home Assistant API
-#api:
-#  reboot_timeout: 0s
-#  encryption:
-#    key: "Jokv+sef/jexoCyDaNj/b4RDGbAIysZv/o4IboDkzi4="
-#    
-#ota:
-#  - platform: esphome
-#    password: "5523434a"
-#    
-#web_server:
-#  port: 80
+api:
+  reboot_timeout: 0s
+  encryption:
+    key: "Jokv+sef/jexoCyDaNj/b4RDGbAIysZv/o4IboDkzi4="
+    
+ota:
+  - platform: esphome
+    password: "5523434a"
+    
+web_server:
+  port: 80
 
 # Globals to store learned signals
 globals:
@@ -108,7 +108,7 @@ esp32_ble_server:
             then:
                 - lambda: |-
                     id(repeat_counter) = 60;
-                    ESP_LOGI("BLE", "repeat_counter set to %d", id(repeat_counter));
+                    ESP_LOGI("BLE", "Repeat_counter set to %d", id(repeat_counter));
         - uuid: "1802"
           id: repeat_counter_read
           description: "Seconds since last PING"
@@ -116,7 +116,62 @@ esp32_ble_server:
           notify: true
           value: !lambda |-
                     uint32_t val = id(repeat_counter);
+                    ESP_LOGI("BLE", "Repeat_counter value: %d", id(repeat_counter));
                     return {(uint8_t)(val), (uint8_t)(val >> 8), (uint8_t)(val >> 16), (uint8_t)(val >> 24)};
+                    
+        - uuid: "1803"
+          id: learn_code_start
+          description: "Learn code start"
+          write: true
+          notify: true
+          on_write:
+            then:
+                - lambda: |-
+                    id(learning_mode) = true;
+                    id(learn_status).publish_state("Waiting for signal... Press remote now!");
+                    ESP_LOGI("BLE", "Learning mode ON - press your remote");
+        - uuid: "1804"
+          id: learn_code_end
+          description: "Learn code end"
+          write: true
+          notify: true
+          on_write:
+            then:
+                - lambda: |-
+                    id(learning_mode) = true;
+                    id(learn_status).publish_state("End waiting for signal!");
+                    ESP_LOGI("BLE", "Learning mode OFF");
+        - uuid: "1805"
+          id: return_learn_code
+          description: "Return learnt code"
+          read: true
+          notify: true
+          value: !lambda |-
+          
+                std::string preview = "";
+                int count1 = 0;
+                for (int32_t val : id(learned_code)) {
+                  if (count1 > 0) preview += ", ";
+                  preview += std::to_string(val);
+                  count1++;
+                  if (count1 >= 20) {
+                    preview += "... (" + std::to_string(id(learned_code).size()) + " total)";
+                    break;
+                  }
+                }
+                ESP_LOGI("raw_code","Current signal:  Size: %d. Signal: [%s]", id(learned_code).size(), preview.c_str());
+            
+                std::vector<uint8_t> out;
+                int count2 = 0;
+                for (int32_t val : id(learned_code)) {
+                  out.push_back((val >> 24) & 0xFF);
+                  out.push_back((val >> 16) & 0xFF);
+                  out.push_back((val >> 8) & 0xFF);
+                  out.push_back(val & 0xFF);
+                  if (++count2 >= 3) break;
+                }
+                return out;
+                    
 # SPI Bus
 spi:
   clk_pin: GPIO18
@@ -133,6 +188,54 @@ cc1101:
   symbol_rate: 5000
   filter_bandwidth: 200kHz
 
+# Remote Receiver - connected to GDO2
+remote_receiver:
+  id: rf_receiver
+  pin: GPIO2
+  tolerance: 50%
+  filter: 200us
+  dump:
+    - raw
+  idle: 10ms
+  on_raw:
+    then:
+      - lambda: |-
+          // Log as single copyable line for YAML
+          std::string code_str = "";
+          for (int i = 0; i < x.size(); i++) {
+            if (i > 0) code_str += ", ";
+            code_str += std::to_string(x[i]);
+          }
+          ESP_LOGI("raw_code", "Pulses: %d", x.size());
+          ESP_LOGI("raw_code", "Copy this line:");
+          ESP_LOGI("raw_code", "[%s]", code_str.c_str());
+          
+          // Learning mode logic
+          if (id(learning_mode)) {
+            id(learned_code).clear();
+            for (int32_t val : x) {
+              id(learned_code).push_back(val);
+            }
+            id(signal_learned) = true;
+            id(learning_mode) = false;
+            
+            std::string preview = "";
+            int count = 0;
+            for (int32_t val : id(learned_code)) {
+              if (count > 0) preview += ", ";
+              preview += std::to_string(val);
+              count++;
+              if (count >= 20) {
+                preview += "... (" + std::to_string(id(learned_code).size()) + " total)";
+                break;
+              }
+            }
+            
+            ESP_LOGI("raw_code","Signal learned! Size: %d. Signal: [%s]", id(learned_code).size(), preview.c_str());
+            
+            id(learn_status).publish_state("Signal learned! " + std::to_string(id(learned_code).size()) + " pulses. Select slot to save.");
+          }
+          
 # Remote Transmitter - connected to GDO0
 remote_transmitter:
   id: rf_transmitter
@@ -146,6 +249,23 @@ remote_transmitter:
       - cc1101.begin_rx: cc1101_module
 
 
+switch:
+  - platform: template
+    name: "Learning Mode"
+    id: learning_mode_switch
+    icon: "mdi:school"
+    lambda: 'return id(learning_mode);'
+    turn_on_action:
+      - lambda: |-
+          id(learning_mode) = true;
+          id(learn_status).publish_state("Waiting for signal... Press remote now!");
+      - logger.log: "Learning mode ON - press your remote"
+    turn_off_action:
+      - lambda: |-
+          id(learning_mode) = false;
+          id(learn_status).publish_state("Learning cancelled");
+      - logger.log: "Learning mode OFF"
+      
 button:
   - platform: restart
     name: "Restart"
