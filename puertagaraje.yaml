@@ -1,7 +1,7 @@
 esphome:
   name: puertagaraje
   friendly_name: Puerta Garaje
-  
+
 esp32:
   board: esp32dev
   framework:
@@ -58,11 +58,22 @@ interval:
             - lambda: |-
                 if (id(learned_code).empty()) {
                   ESP_LOGW("replay", "No signal learned yet!");
-                  id(learn_status).publish_state("No signal to replay - learn one first!");
                   return;
                 }
-                ESP_LOGI("replay", "Sending %d pulses...", id(learned_code).size());
-                id(learn_status).publish_state("Transmitting...");
+                
+                std::string preview = "";
+                int count1 = 0;
+                for (int32_t val : id(learned_code)) {
+                  if (count1 > 0) preview += ", ";
+                  preview += std::to_string(val);
+                  count1++;
+                  if (count1 >= 50) {
+                    preview += "... (" + std::to_string(id(learned_code).size()) + " total)";
+                    break;
+                  }
+                }
+                ESP_LOGI("replay","Sending signal :  Size: %d. Signal: [%s]", id(learned_code).size(), preview.c_str());
+                
             - remote_transmitter.transmit_raw:
                 carrier_frequency: 0Hz
                 code: !lambda 'return id(learned_code);'
@@ -128,7 +139,6 @@ esp32_ble_server:
             then:
                 - lambda: |-
                     id(learning_mode) = true;
-                    id(learn_status).publish_state("Waiting for signal... Press remote now!");
                     ESP_LOGI("BLE", "Learning mode ON - press your remote");
         - uuid: "1804"
           id: learn_code_end
@@ -139,7 +149,6 @@ esp32_ble_server:
             then:
                 - lambda: |-
                     id(learning_mode) = false;
-                    id(learn_status).publish_state("End waiting for signal!");
                     ESP_LOGI("BLE", "Learning mode OFF");
         - uuid: "1805"
           id: return_learn_code
@@ -154,7 +163,7 @@ esp32_ble_server:
                   if (count1 > 0) preview += ", ";
                   preview += std::to_string(val);
                   count1++;
-                  if (count1 >= 20) {
+                  if (count1 >= 50) {
                     preview += "... (" + std::to_string(id(learned_code).size()) + " total)";
                     break;
                   }
@@ -206,19 +215,26 @@ remote_receiver:
             if (i > 0) code_str += ", ";
             code_str += std::to_string(x[i]);
           }
-          ESP_LOGI("raw_code", "Pulses: %d", x.size());
-          ESP_LOGI("raw_code", "Copy this line:");
-          ESP_LOGI("raw_code", "[%s]", code_str.c_str());
+          //ESP_LOGI("raw_code", "Pulses: %d", x.size());
+          //ESP_LOGI("raw_code", "Copy this line:");
+          //ESP_LOGI("raw_code", "[%s]", code_str.c_str());
           
           // Learning mode logic
           if (id(learning_mode)) {
+          
+            if (x.size() < 10) {
+                ESP_LOGI("raw_code", "Signal too short (%d elements), ignoring.", x.size());
+                return;
+            }
+  
             id(learned_code).clear();
             for (int32_t val : x) {
               id(learned_code).push_back(val);
             }
             id(signal_learned) = true;
             id(learning_mode) = false;
-            
+           
+           
             std::string preview = "";
             int count = 0;
             for (int32_t val : id(learned_code)) {
@@ -233,7 +249,6 @@ remote_receiver:
             
             ESP_LOGI("raw_code","Signal learned! Size: %d. Signal: [%s]", id(learned_code).size(), preview.c_str());
             
-            id(learn_status).publish_state("Signal learned! " + std::to_string(id(learned_code).size()) + " pulses. Select slot to save.");
           }
           
 # Remote Transmitter - connected to GDO0
@@ -258,12 +273,10 @@ switch:
     turn_on_action:
       - lambda: |-
           id(learning_mode) = true;
-          id(learn_status).publish_state("Waiting for signal... Press remote now!");
       - logger.log: "Learning mode ON - press your remote"
     turn_off_action:
       - lambda: |-
           id(learning_mode) = false;
-          id(learn_status).publish_state("Learning cancelled");
       - logger.log: "Learning mode OFF"
       
 button:
@@ -279,11 +292,7 @@ button:
           id(repeat_counter)=60;
           ESP_LOGI("BLE", "repeat_counter reset to %d", id(repeat_counter));
 
-text_sensor:
-  - platform: template
-    name: "Status"
-    id: learn_status
-    icon: "mdi:information"
+
  
 sensor:
   - platform: template
