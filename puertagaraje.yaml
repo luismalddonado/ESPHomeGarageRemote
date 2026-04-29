@@ -1,7 +1,52 @@
 esphome:
   name: puertagaraje
   friendly_name: Puerta Garaje
+  on_boot:
+    priority: -100
+    then:
+      - lambda: |-
+          // =========================
+          // SAME STRUCT FOR SAVE/LOAD
+          // =========================
+          struct LearnedCode {
+            uint16_t length;
+            int32_t data[256];
+          };
 
+          auto prefs = global_preferences->make_preference<LearnedCode>(54321);
+          LearnedCode stored;
+
+          if (!prefs.load(&stored)) {
+            ESP_LOGW("NVS", "No stored learned_code found");
+            return;
+          }
+
+          if (stored.length > 256) {
+            ESP_LOGE("NVS", "Corrupt data detected: length=%d", stored.length);
+            return;
+          }
+
+          id(learned_code).clear();
+
+          for (int i = 0; i < stored.length; i++) {
+            id(learned_code).push_back(stored.data[i]);
+          }
+
+          std::string preview = "";
+          int count1 = 0;
+          for (int32_t val : id(learned_code)) {
+            if (count1 > 0) preview += ", ";
+            preview += std::to_string(val);
+            count1++;
+            if (count1 >= 50) {
+              preview += "... (" + std::to_string(id(learned_code).size()) + " total)";
+              break;
+            }
+          }
+        
+          id(current_signal).publish_state(preview.c_str());
+                
+          ESP_LOGI("NVS", "Loaded learned_code Size: %d. Signal: [%s]", stored.length, preview.c_str());
 esp32:
   board: esp32dev
   framework:
@@ -12,10 +57,6 @@ esp32:
 #  password: "33333333"
 #  reboot_timeout: 0s
 
-logger:
-  level: INFO
-
-#Enable Home Assistant API
 #api:
 #  reboot_timeout: 0s
 #  encryption:
@@ -28,16 +69,28 @@ logger:
 #web_server:
 #  port: 80
 
+logger:
+  level: INFO
+
 # Globals to store learned signals
 globals:
-  - id: learned_code
+  - id: default_code
     type: std::vector<int32_t>
     restore_value: false
     initial_value: "{2638, -392, 2616, -369, 2643, -378, 2601, -374, 2644, -382, 2622, -359, 2644, -380, 370, -2624, 2628, -380, 369, -2642, 2605, -382, 369, -2642, 2606, -383, 370, -2642, 377, -2598, 374, -2642, 2609, -384, 371}"
+  - id: learned_code
+    type: std::vector<int32_t>
+    restore_value: false
+  - id: use_default_code
+    type: bool
+    initial_value: 'true'
   - id: learning_mode
     type: bool
     initial_value: 'false'
   - id: signal_learned
+    type: bool
+    initial_value: 'false'
+  - id: reboot_after_signal_learned
     type: bool
     initial_value: 'false'
   - id: repeat_counter
@@ -56,27 +109,62 @@ interval:
                 ESP_LOGI("replay", "Pending executions #%d", id(repeat_counter));
                 id(repeat_counter)--;
             - lambda: |-
-                if (id(learned_code).empty()) {
+                if ( (id(use_default_code)==true) && (id(default_code).empty()) ) 
+                {
+                  ESP_LOGW("replay", "No signal learned yet!");
+                  return;
+                }
+                if ((id(use_default_code)==false)&&(id(learned_code).empty())) 
+                {
                   ESP_LOGW("replay", "No signal learned yet!");
                   return;
                 }
                 
-                std::string preview = "";
-                int count1 = 0;
-                for (int32_t val : id(learned_code)) {
-                  if (count1 > 0) preview += ", ";
-                  preview += std::to_string(val);
-                  count1++;
-                  if (count1 >= 50) {
-                    preview += "... (" + std::to_string(id(learned_code).size()) + " total)";
-                    break;
-                  }
+                if (id(use_default_code)==true) {
+                    std::string preview = "";
+                    int count1 = 0;
+                    for (int32_t val : id(default_code)) {
+                      if (count1 > 0) preview += ", ";
+                      preview += std::to_string(val);
+                      count1++;
+                      if (count1 >= 50) {
+                        preview += "... (" + std::to_string(id(default_code).size()) + " total)";
+                        break;
+                      }
+                    }
+                    
+                    ESP_LOGI("replay","Sending DEFAULT signal :  Size: %d. Signal: [%s]", id(default_code).size(), preview.c_str());
                 }
-                ESP_LOGI("replay","Sending signal :  Size: %d. Signal: [%s]", id(learned_code).size(), preview.c_str());
+                else
+                {
+                    std::string preview = "";
+                    int count1 = 0;
+                    for (int32_t val : id(learned_code)) {
+                      if (count1 > 0) preview += ", ";
+                      preview += std::to_string(val);
+                      count1++;
+                      if (count1 >= 50) {
+                        preview += "... (" + std::to_string(id(learned_code).size()) + " total)";
+                        break;
+                      }
+                    }  
+                    
+                    ESP_LOGI("replay","Sending LEARNED signal :  Size: %d. Signal: [%s]", id(learned_code).size(), preview.c_str());                    
+                }
+                
                 
             - remote_transmitter.transmit_raw:
                 carrier_frequency: 0Hz
-                code: !lambda 'return id(learned_code);'
+                code: !lambda |-
+                  if (id(use_default_code)==true) {
+                        ESP_LOGI("replay","DEFAULT signal sent!");
+                        return id(default_code);
+                  } 
+                  else {
+                        ESP_LOGI("replay","LEARNED signal sent!");
+                        return id(learned_code);
+                  }
+
   - interval: 15s
     then:
       - lambda: |-
@@ -112,7 +200,7 @@ esp32_ble_server:
       characteristics:
         - uuid: "1801"
           id: open_the_door
-          description: "Button pressed"
+          description: "Open door"
           write: true
           notify: true
           on_write:
@@ -157,22 +245,24 @@ esp32_ble_server:
           notify: true
           value: !lambda |-
           
+                std::vector<int32_t>& active_code = id(use_default_code) ? id(default_code) : id(learned_code);
+                
                 std::string preview = "";
                 int count1 = 0;
-                for (int32_t val : id(learned_code)) {
+                for (int32_t val : active_code) {
                   if (count1 > 0) preview += ", ";
                   preview += std::to_string(val);
                   count1++;
                   if (count1 >= 50) {
-                    preview += "... (" + std::to_string(id(learned_code).size()) + " total)";
+                    preview += "... (" + std::to_string(active_code.size()) + " total)";
                     break;
                   }
                 }
-                ESP_LOGI("raw_code","Current signal:  Size: %d. Signal: [%s]", id(learned_code).size(), preview.c_str());
+                ESP_LOGI("BLE","Current signal:  Size: %d. Signal: [%s]", active_code.size(), preview.c_str());
             
                 std::vector<uint8_t> out;
                 int count2 = 0;
-                for (int32_t val : id(learned_code)) {
+                for (int32_t val : active_code) {
                   out.push_back((val >> 24) & 0xFF);
                   out.push_back((val >> 16) & 0xFF);
                   out.push_back((val >> 8) & 0xFF);
@@ -215,23 +305,25 @@ remote_receiver:
             if (i > 0) code_str += ", ";
             code_str += std::to_string(x[i]);
           }
-          //ESP_LOGI("raw_code", "Pulses: %d", x.size());
-          //ESP_LOGI("raw_code", "Copy this line:");
-          //ESP_LOGI("raw_code", "[%s]", code_str.c_str());
+          //ESP_LOGI("remote_receiver", "Pulses: %d", x.size());
+          //ESP_LOGI("remote_receiver", "Copy this line:");
+          //ESP_LOGI("remote_receiver", "[%s]", code_str.c_str());
           
           // Learning mode logic
           if (id(learning_mode)) {
           
             if (x.size() < 10) {
-                ESP_LOGI("raw_code", "Signal too short (%d elements), ignoring.", x.size());
+                ESP_LOGI("remote_receiver", "Signal too short (%d elements), ignoring.", x.size());
                 return;
             }
   
             id(learned_code).clear();
             for (int32_t val : x) {
+              if (abs(val) < 100 || abs(val) >= 10000) continue; // skip spurious pulses
               id(learned_code).push_back(val);
             }
             id(signal_learned) = true;
+            id(reboot_after_signal_learned) = true;
             id(learning_mode) = false;
            
            
@@ -241,15 +333,21 @@ remote_receiver:
               if (count > 0) preview += ", ";
               preview += std::to_string(val);
               count++;
-              if (count >= 20) {
+              if (count >= 99) {
                 preview += "... (" + std::to_string(id(learned_code).size()) + " total)";
                 break;
               }
             }
-            
-            ESP_LOGI("raw_code","Signal learned! Size: %d. Signal: [%s]", id(learned_code).size(), preview.c_str());
+
+            ESP_LOGI("remote_receiver","Signal LEARNED! Size: %d. Signal: [%s]", id(learned_code).size(), preview.c_str());
+            ESP_LOGI("remote_receiver","You can copy the signal in the default_code variable and set default_code to true if you want!");
             
           }
+      - if:
+          condition:
+            lambda: 'return id(reboot_after_signal_learned);'
+          then:         
+            - script.execute: save_and_restart
           
 # Remote Transmitter - connected to GDO0
 remote_transmitter:
@@ -264,36 +362,102 @@ remote_transmitter:
       - cc1101.begin_rx: cc1101_module
 
 
-switch:
-  - platform: template
-    name: "Learning Mode"
-    id: learning_mode_switch
-    icon: "mdi:school"
-    lambda: 'return id(learning_mode);'
-    turn_on_action:
-      - lambda: |-
-          id(learning_mode) = true;
-      - logger.log: "Learning mode ON - press your remote"
-    turn_off_action:
-      - lambda: |-
-          id(learning_mode) = false;
-      - logger.log: "Learning mode OFF"
+# =========================
+# SAVE SCRIPT
+# =========================
+script:
+  - id: save_and_restart
+    then:
+      - logger.log:
+          level: INFO
+          tag: "save_and_restart"
+          format: "Starting save_and_restart script"
+      - script.execute: save_learned_code
+      - delay: 10000ms
+      - logger.log:
+          level: INFO
+          tag: "save_and_restart"
+          format: "Starting restart_button"
+      - button.press: restart_button
       
+  - id: save_learned_code
+    then:
+      - lambda: |-
+          struct LearnedCode {
+            uint16_t length;
+            int32_t data[256];
+          };
+
+          std::string out = "";
+
+          for (size_t i = 0; i < id(learned_code).size(); i++) {
+            out += std::to_string(id(learned_code)[i]);
+            if (i < id(learned_code).size() - 1) {
+              out += ",";
+            }
+          }
+
+          ESP_LOGI("NVS", "Vector: [%s]", out.c_str());
+  
+          LearnedCode stored{};
+          size_t size = id(learned_code).size();
+
+          if (size > 256) {
+            ESP_LOGW("NVS", "Truncating vector (size=%d)", size);
+            size = 256;
+          }
+
+          stored.length = size;
+
+          for (size_t i = 0; i < size; i++) {
+            stored.data[i] = id(learned_code)[i];
+          }
+
+          auto prefs = global_preferences->make_preference<LearnedCode>(54321);
+
+          if (prefs.save(&stored)) {
+            ESP_LOGI("NVS", "SAVED learned_code (%d elements)", stored.length);
+          } else {
+            ESP_LOGE("NVS", "Failed to save learned_code");
+          }
+          
 button:
   - platform: restart
-    name: "Restart"
+    name: "Restart Device"
+    id: restart_button
 
 
   - platform: template
-    name: "Send Signal"
+    name: "Open door"
     icon: "mdi:replay"
     on_press:
       - lambda: |-
           id(repeat_counter)=60;
-          ESP_LOGI("BLE", "repeat_counter reset to %d", id(repeat_counter));
+          ESP_LOGI("BUTTON", "repeat_counter reset to %d", id(repeat_counter));
+          
+  - platform: template
+    name: "Learn code start"
+    icon: "mdi:replay"
+    on_press:
+      - lambda: |-
+          id(learning_mode) = true;
+          ESP_LOGI("BUTTON", "Learning mode ON - press your remote");
 
+  - platform: template
+    name: "Learn code stop"
+    icon: "mdi:replay"
+    on_press:
+      - lambda: |-
+          id(learning_mode) = false;
+          ESP_LOGI("BUTTON", "Learning mode OFF");
+          
+text_sensor:
+  - platform: template
+    name: "Last Received Signal"
+    id: current_signal
+    icon: "mdi:signal"
+    
 
- 
 sensor:
   - platform: template
     name: "Signal length"
