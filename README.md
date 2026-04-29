@@ -5,7 +5,7 @@ This ESPHome backend has two different modules:
 - loracoche
 - puertagaraje
 
-There is an [Android Mobile app](https://github.com/luismaldonado/GarageRemoteControl) to control the puertagaraje module directly, too.
+There is an [Android Mobile app](https://github.com/luismalddonado/GarageRemoteControl) to control the puertagaraje module directly, too.
 
 ## Architecture Diagram
 
