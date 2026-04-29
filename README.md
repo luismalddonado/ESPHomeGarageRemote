@@ -35,6 +35,25 @@ sequenceDiagram
 - **loracoche**: ESP32 with LoRa (SX127x) module and OLED display
 - **puertagaraje**: ESP32 with CC1101 transceiver module wired
 
+
+## Wiring Table
+
+| Wire   | ESP32 Pin | CC1101 Pin | Function          |
+|--------|-----------|-----------|--------------------|
+| Red    | 3V3       | VCC       | Power (3.3V only!) |
+| Black  | GND       | GND       | Ground             |
+| Orange | GPIO23    | MOSI      | SPI Data Out       |
+| Yellow | GPIO19    | MISO      | SPI Data In        |
+| Green  | GPIO18    | SCK       | SPI Clock          |
+| Purple | GPIO5     | CSN       | SPI Chip Select    |
+| Blue   | GPIO4     | GDO0      | TX Data            |
+| Cyan   | GPIO2     | GDO2      | RX Data            |
+
+> ⚠️ The CC1101 is a 3.3V device. Do not connect to 5V — it will damage the module.
+
+### Notes
+- If **GPIO2** causes issues on your board (some have an onboard LED), use **GPIO15**, **GPIO16**, or **GPIO17** instead.
+
 ---
 
 ## 🚗 loracoche Features
