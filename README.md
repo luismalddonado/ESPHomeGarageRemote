@@ -20,6 +20,8 @@ sequenceDiagram
     LC->>PG1: BLE command (open_the_door)
     PG1->>D1: Send 433 MHz RF signal
     PG1-->>LC: repeat_counter_read (remaining time)
+```	
+```mermaid
 sequenceDiagram
     participant MA as Mobile APP
     participant PG2 as puertagaraje
