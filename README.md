@@ -114,7 +114,6 @@ Key parameters you can adjust in the puertagaraje config:
 1. Install [ESPHome](https://esphome.io/guides/getting_started_command_line.html)
 2. Flash `loracoche` config to the LoRa-connected ESP32
 3. Flash `puertagaraje` config to the CC1101-connected ESP32
-4. Add `loracoche` to your Home Assistant ESPHome integration
 
 ---
 
