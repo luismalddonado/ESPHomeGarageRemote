@@ -87,7 +87,7 @@ Key parameters you can adjust in the puertagaraje config:
 |---|---|---|
 | repeat_counter | 60 times | How many times the 433 MHz signal is transmitted after `open_the_door` is received |
 | use_default_code | true | What 433 MHz signal is transmitted. It can be either the one stored in the default_code global variable or the learned one (learned_code) |
-| default_code | RF Code | Signal transmitted if use_default_code is True |
+| default_code | RF Code | Signal transmitted if use_default_code is true |
 ---
 
 ## Getting Started
