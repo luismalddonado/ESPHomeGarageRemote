@@ -109,6 +109,9 @@ Key parameters you can adjust in the puertagaraje config:
 | default_code | RF Code | Signal transmitted if use_default_code is true |
 ---
 
+Key parameters you can adjust in the loracoche config:
+*mac_address stores the BLE MAC address of the puertagaraje module. You have to put your own MAC address. Sorry for this!
+
 ## Getting Started
 
 1. Install [ESPHome](https://esphome.io/guides/getting_started_command_line.html)
