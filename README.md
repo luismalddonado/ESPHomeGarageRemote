@@ -110,7 +110,8 @@ Key parameters you can adjust in the puertagaraje config:
 ---
 
 Key parameters you can adjust in the loracoche config:
-*mac_address stores the BLE MAC address of the puertagaraje module. You have to put your own MAC address. Sorry for this!
+
+**mac_address stores the BLE MAC address of the puertagaraje module. You have to put your own MAC address. Sorry for this!**
 
 ## Getting Started
 
