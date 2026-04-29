@@ -13,13 +13,20 @@ This ESPHome backend has two different modules:
 sequenceDiagram
     participant HA as Home Assistant
     participant LC as loracoche
-    participant PG as puertagaraje
-    participant D as Garage Door
+    participant PG1 as puertagaraje
+    participant D1 as Garage Door
 
     HA->>LC: LoRa command (cmdopen / pingcasa)
-    LC->>PG: BLE command (open_the_door)
-    PG->>D: Send 433 MHz RF signal
-    PG-->>LC: repeat_counter_read (remaining time)
+    LC->>PG1: BLE command (open_the_door)
+    PG1->>D1: Send 433 MHz RF signal
+    PG1-->>LC: repeat_counter_read (remaining time)
+sequenceDiagram
+    participant MA as Mobile APP
+    participant PG2 as puertagaraje
+    participant D2 as Garage Door
+
+    MA->>PG2: BLE command (open_the_door)
+    PG2->>D2: Send 433 MHz RF signal
 ```	
 
 ## 🚗 loracoche Features
@@ -60,6 +67,7 @@ This project is based on the
 
 - Communication flow:
   - Home Assistant → LoRa → loracoche → BLE → puertagaraje → RF → Garage Door
+  - Mobile app  → BLE → puertagaraje → RF → Garage Door
 - Designed for modularity and remote operation
 - This would be an example code to send LORA commands to  **loracoche** from a third ESP Home device connected to your Home Assistant
 
