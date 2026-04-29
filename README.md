@@ -75,6 +75,8 @@ sequenceDiagram
 5. Press the "Stop Learning" button
 6. The module will restart in order to ensure data is stored in the flash memory
 
+Signal can also be learnt via enabling WIFI on the puertagaraje module and connecting it with Home Assistant. Use the "Learn code start" and "Learn code stop" buttons in these case.
+
 ---
 
 ## Configuration
@@ -83,8 +85,9 @@ Key parameters you can adjust in the puertagaraje config:
 
 | Parameter | Default | Description |
 |---|---|---|
-| RF signal duration | 300 seconds | How long the 433 MHz signal is transmitted after `open_the_door` is received |
-
+| repeat_counter | 60 times | How many times the 433 MHz signal is transmitted after `open_the_door` is received |
+| use_default_code | true | What 433 MHz signal is transmitted. It can be either the one stored in the default_code global variable or the learned one (learned_code) |
+| default_code | RF Code | Signal transmitted if use_default_code is True |
 ---
 
 ## Getting Started
