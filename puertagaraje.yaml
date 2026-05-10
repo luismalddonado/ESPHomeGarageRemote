@@ -1,6 +1,21 @@
-esphome:
+substitutions:
   name: puertagaraje
-  friendly_name: Puerta Garaje
+  friendly_name: "Puerta Garaje"
+  rf_frequency: 433.92MHz
+  cc1101_output_power: "11"
+  spi_clk: GPIO18
+  spi_mosi: GPIO23
+  spi_miso: GPIO19
+  cc1101_cs: GPIO5
+  rf_rx_pin: GPIO2
+  rf_tx_pin: GPIO4
+  repeat_cycles: "60"
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  includes:
+    - helpers.h
   on_boot:
     priority: -100
     then:
@@ -32,17 +47,7 @@ esphome:
             id(learned_code).push_back(stored.data[i]);
           }
 
-          std::string preview = "";
-          int count1 = 0;
-          for (int32_t val : id(learned_code)) {
-            if (count1 > 0) preview += ", ";
-            preview += std::to_string(val);
-            count1++;
-            if (count1 >= 50) {
-              preview += "... (" + std::to_string(id(learned_code).size()) + " total)";
-              break;
-            }
-          }
+          std::string preview = format_pulse_preview(id(learned_code));
         
           id(current_signal).publish_state(preview.c_str());
                 
@@ -53,18 +58,18 @@ esp32:
     type: esp-idf 
   
 #wifi: 
-#  ssid:  DOMOTICACASA
-#  password: "33333333"
+#  ssid: !secret wifi_ssid
+#  password: !secret wifi_password
 #  reboot_timeout: 0s
 
 #api:
 #  reboot_timeout: 0s
 #  encryption:
-#    key: "Jokv+sef/jexoCyDaNj/b4RDGbAIysZv/o4IboDkzi4="
+#    key: !secret api_encryption_key
     
 #ota:
 #  - platform: esphome
-#    password: "5523434a"
+#    password: !secret ota_password
     
 #web_server:
 #  port: 80
@@ -96,7 +101,7 @@ globals:
   - id: repeat_counter
     type: int
     restore_value: no
-    initial_value: '60'
+    initial_value: ${repeat_cycles}
 
 interval:
   - interval: 3s
@@ -121,34 +126,12 @@ interval:
                 }
                 
                 if (id(use_default_code)==true) {
-                    std::string preview = "";
-                    int count1 = 0;
-                    for (int32_t val : id(default_code)) {
-                      if (count1 > 0) preview += ", ";
-                      preview += std::to_string(val);
-                      count1++;
-                      if (count1 >= 50) {
-                        preview += "... (" + std::to_string(id(default_code).size()) + " total)";
-                        break;
-                      }
-                    }
-                    
+                    std::string preview = format_pulse_preview(id(default_code));
                     ESP_LOGI("replay","Sending DEFAULT signal :  Size: %d. Signal: [%s]", id(default_code).size(), preview.c_str());
                 }
                 else
                 {
-                    std::string preview = "";
-                    int count1 = 0;
-                    for (int32_t val : id(learned_code)) {
-                      if (count1 > 0) preview += ", ";
-                      preview += std::to_string(val);
-                      count1++;
-                      if (count1 >= 50) {
-                        preview += "... (" + std::to_string(id(learned_code).size()) + " total)";
-                        break;
-                      }
-                    }  
-                    
+                    std::string preview = format_pulse_preview(id(learned_code));
                     ESP_LOGI("replay","Sending LEARNED signal :  Size: %d. Signal: [%s]", id(learned_code).size(), preview.c_str());                    
                 }
                 
@@ -247,17 +230,7 @@ esp32_ble_server:
           
                 std::vector<int32_t>& active_code = id(use_default_code) ? id(default_code) : id(learned_code);
                 
-                std::string preview = "";
-                int count1 = 0;
-                for (int32_t val : active_code) {
-                  if (count1 > 0) preview += ", ";
-                  preview += std::to_string(val);
-                  count1++;
-                  if (count1 >= 50) {
-                    preview += "... (" + std::to_string(active_code.size()) + " total)";
-                    break;
-                  }
-                }
+                std::string preview = format_pulse_preview(active_code);
                 ESP_LOGI("BLE","Current signal:  Size: %d. Signal: [%s]", active_code.size(), preview.c_str());
             
                 std::vector<uint8_t> out;
@@ -273,16 +246,16 @@ esp32_ble_server:
                     
 # SPI Bus
 spi:
-  clk_pin: GPIO18
-  mosi_pin: GPIO23
-  miso_pin: GPIO19
+  clk_pin: ${spi_clk}
+  mosi_pin: ${spi_mosi}
+  miso_pin: ${spi_miso}
 
 # CC1101 - Dual Pin Mode
 cc1101:
   id: cc1101_module
-  cs_pin: GPIO5
-  frequency: 433.92MHz
-  output_power: 11
+  cs_pin: ${cc1101_cs}
+  frequency: ${rf_frequency}
+  output_power: ${cc1101_output_power}
   modulation_type: ASK/OOK
   symbol_rate: 5000
   filter_bandwidth: 200kHz
@@ -290,7 +263,7 @@ cc1101:
 # Remote Receiver - connected to GDO2
 remote_receiver:
   id: rf_receiver
-  pin: GPIO2
+  pin: ${rf_rx_pin}
   tolerance: 50%
   filter: 200us
   dump:
@@ -327,16 +300,9 @@ remote_receiver:
             id(learning_mode) = false;
            
            
-            std::string preview = "";
-            int count = 0;
-            for (int32_t val : id(learned_code)) {
-              if (count > 0) preview += ", ";
-              preview += std::to_string(val);
-              count++;
-              if (count >= 99) {
-                preview += "... (" + std::to_string(id(learned_code).size()) + " total)";
-                break;
-              }
+            std::string preview = format_pulse_preview(id(learned_code), 99);
+            if (id(learned_code).size() > 256) {
+              ESP_LOGW("remote_receiver", "Signal length (%d) exceeds storage limit (256). It will be truncated!", id(learned_code).size());
             }
 
             ESP_LOGI("remote_receiver","Signal LEARNED! Size: %d. Signal: [%s]", id(learned_code).size(), preview.c_str());
@@ -352,7 +318,7 @@ remote_receiver:
 # Remote Transmitter - connected to GDO0
 remote_transmitter:
   id: rf_transmitter
-  pin: GPIO4
+  pin: ${rf_tx_pin}
   carrier_duty_percent: 100%
   on_transmit:
     then:
@@ -466,4 +432,3 @@ sensor:
     unit_of_measurement: "pulses"
     lambda: 'return id(learned_code).size();'
     update_interval: 5s
-    

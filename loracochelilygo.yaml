@@ -18,15 +18,15 @@ logger:
 #api:
 #  reboot_timeout: 0s
 #  encryption:
-#    key: "Jokv+sef/jexoCyDaNj/b4RDGbAIysZv/o4IboDkzi4="
+#    key: !secret api_encryption_key
 
 #ota:
 #  - platform: esphome
-#    password: "5523434a"
+#    password: !secret ota_password
 
 #wifi:
-#  ssid: "DOMOTICACASA"
-#  password: "33333333"
+#  ssid: !secret wifi_ssid
+#  password: !secret wifi_password
 #  output_power: 20dB
 #  power_save_mode: none
           
